@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>My Chat Server</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+
+        #chat {
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            max-height: 90vh;
+        }
+
+        #chat-body {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .messages {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            min-height: 100%;
+        }
+
+        .user {
+            align-self: end;
+            color: darkgreen;
+            padding: 12px 0;
+        }
+
+        .assistant {
+            font-style: italic;
+            margin-right: 10%;
+        }
+
+        input[type="number"] {
+            max-width: 75px;
+        }
+
+        /* Remove spinner arrows from number inputs */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .info {
+            font-style: normal;
+            display: flex;
+            gap: 12px;
+            font-size: smaller;
+            background-color: white;
+            width: fit-content;
+            margin: 0 6px;
+        }
+
+        .user .info {
+            float: right;
+        }
+
+        .text-box {
+            display: flex;
+            align-items: center;
+        }
+
+    </style>
+    <script>
+    function scrollToBottom() {
+        const chatBody = document.getElementById('chat-body');
+        chatBody.scrollTop = chatBody.scrollHeight;    
+    }
+        
+    function showLoading() {
+        const messages = document.querySelector('.messages');
+        const userInput = document.getElementById('user');
+        
+        // Create and append user message div
+        const userDiv = document.createElement('div');
+        userDiv.className = 'user';
+        userDiv.textContent = userInput.value;
+        messages.appendChild(userDiv);
+        
+        // Create and append assistant "thinking" div
+        const assistantDiv = document.createElement('div');
+        assistantDiv.className = 'assistant';
+        assistantDiv.textContent = 'thinking ...';
+        messages.appendChild(assistantDiv);
+        
+        scrollToBottom();
+        
+        setTimeout(() => { 
+            userInput.value = '';
+        }, 0);
+    }
+    </script>
+</head>
+<body class="p-4 bg-light">
+    <h1 onclick="window.location.href='/'" class="container-fluid bg-success text-light rounded">My Chat Server</h1>
+    <div id="chat">
+        <div id="chat-body" class="p-3">
+            <div class="messages">
+                {{ results|safe }}
+            </div>
+        </div>
+    <form id="chatform" action="/submit" method="post" onsubmit="showLoading()">
+        <input type="hidden" id="chat_id" name="chat_id" value="{{ chat_id }}">
+        <div class="text-box">
+            <textarea id="user" name="user" rows="4" cols="50" placeholder="Enter your message here..."></textarea>
+        </div>
+            <div class="row m-3 align-items-center">
+                <div class="col-auto">
+                    <label for="temperature" class="form-label mb-0">Temperature</label>
+                </div>
+                <div class="col-auto"><input type="number" class="form-control" id="temperature" name="temperature" min="0" step="any" value={{ temperature }}></div>
+
+                <div class="col-auto"><label for="top_p" class="form-label mb-0">Top P</label></div>
+                <div class="col-auto"><input type="number" class="form-control" id="top_p" name="top_p" min="0" max="1" step="any" value={{ top_p }}></div>
+
+                <div class="col-auto"><label for="max_tokens" class="form-label mb-0">Token Limit</label></div>
+                <div class="col-auto"><input type="number" class="form-control" id="max_tokens" name="max_tokens" min="1" value={{ max_tokens }}></div>
+                <div class="col-auto ms-auto">
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </div>
+            </div>
+    </form>
+</div>
+</body>
+</html>
