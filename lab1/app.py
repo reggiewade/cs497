@@ -42,7 +42,7 @@ def submit():
     config = {}
     for key, value in request.form.items():
         if key in [ 'temperature', 'top_p', 'max_tokens' ] and value:
-            config[key] = float(value)
+            config[key] = int(value) if key == 'max_tokens' else float(value)
     # debugging output
     print(f"Received message: {user_message}")
     print(f"Recieved config: {config}")

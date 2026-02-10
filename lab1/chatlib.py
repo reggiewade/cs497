@@ -1,16 +1,21 @@
 #****************************************************************************
 # chatlib.py - Chat model support files
-# v1
+# v2
 # Boise State University CS 497
 # Dr. Henderson
 # Spring 2026
 #
-# This adds support for the Boise State AI API
+# Wraps the langchain llm class to include support for the Boise State AI API
+# and other features.
+#
 # Use get_chat_model() to get a model. Values must be set in a .env file:
 # MODEL_PROVIDER : the name of the provider, e.g. openai, or boise-state
 # MODEL_CHAT : must be a supported model from the provider
 # PROVIDER_URL : if a custom url is used set it here
 # API_KEY : the secret api key for the model provider
+#
+# Use the returned object to call the chat() method passing in the
+# messages and config dict
 #----------------------------------------------------------------------------
 from dotenv import load_dotenv
 from typing import List, Optional
@@ -19,7 +24,7 @@ import os
 
 from langchain.chat_models.base import BaseChatModel
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage, convert_to_openai_messages
 from langchain_core.outputs import ChatResult, ChatGeneration
 
 load_dotenv()
@@ -29,24 +34,25 @@ class BoiseStateChatModel(BaseChatModel):
     api_key: str
     temperature: float = 0.7
     max_tokens: int = 1000
+    top_p: float = 1.0
     base_url: str = "https://api.boisestate.ai/chat/api-converse"
 
     def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs):
-        message_text = messages[-1].content if messages else ""
-        
         headers = {
             'X-API-Key': self.api_key,
             'Content-Type': 'application/json'
         }
         
         payload = {
-            'message': message_text,
+            'message': convert_to_openai_messages(messages),
             'modelId': self.model_id,
-            'temperature': self.temperature,
-            'maxTokens': self.max_tokens
         }
 
-        print(headers)
+        for param, bsu_param in (('temperature', 'temperature'), ('max_tokens', 'maxTokens'), ('top_p', 'topP')):
+            if  param in kwargs:
+                payload[bsu_param] = kwargs[param]
+
+        #print(headers)
         
         response = requests.post(self.base_url, headers=headers, json=payload)
         data = response.json()
@@ -64,6 +70,42 @@ class BoiseStateChatModel(BaseChatModel):
     def _llm_type(self):
         return "boise-state"
 
+class ChatModel:
+
+    def __init__(self, llm):
+        self.llm = llm
+
+    def chat(self, messages, config):
+        #print(f"CONFIG: {config}, llm-type: {self.llm._llm_type}")
+        kwargs = { **config }
+        if self.llm._llm_type == 'chat-ollama':
+            if 'max_tokens' in kwargs:
+                kwargs['num_predict'] = config['max_tokens']
+                del kwargs['max_tokens']
+            response = self.llm.invoke(messages, options=kwargs)
+        else:
+            #if 'max_tokens' in kwargs:
+            #    kwargs['max_completion_tokens'] = config['max_tokens']
+            #    del kwargs['max_tokens']
+            response = self.llm.invoke(messages, **kwargs)
+
+        print(f"{type(response)}: {response}")
+
+        for key in [ 'temperature', 'top_p', 'max_tokens' ]:
+            if key in config: response.additional_kwargs[key] = config[key]
+
+        #print("Setting tokens")
+        tokens = response.usage_metadata
+        if tokens:
+            messages[-1].response_metadata['token_usage'] = { 'prompt_tokens': tokens.get('input_tokens') }
+        else:
+            meta = response.response_metadata
+            tokens = meta.get('token_usage')
+            if tokens:
+                messages[-1].response_metadata['token_usage'] = { 'prompt_tokens': tokens.get('prompt_tokens') }
+
+        return response
+
 def get_chat_model():
     model = os.getenv("MODEL_CHAT")
     key = os.getenv("API_KEY")
@@ -80,10 +122,9 @@ def get_chat_model():
             model,
             configurable_fields="any",
             model_provider=provider,
-            temperature=0,
             base_url=os.getenv('PROVIDER_URL'),
             api_key=key
         )
 
-    return llm
+    return ChatModel(llm)
     

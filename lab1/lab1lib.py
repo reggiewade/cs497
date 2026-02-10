@@ -24,19 +24,13 @@ def chat(chat_id, user_message, config=None):
         config (dict, optional): LLM parameters. Defaults to None.
     """
     
-    # convert to HumanMessage object
     chats[chat_id].append(HumanMessage(user_message))
-    messages = chats[chat_id]
-    
-    response = llm.invoke(messages, **config)
-    
-    for key in [ 'temperature', 'top_p', 'max_tokens' ]:
-        if key in config: response.additional_kwargs[key] = config[key]
 
-    # chats[chat_id][-1] is the last HumanMessage sent, this appends a dictionary to the response_metadata field in the 
-    # HumanMessage object.  This stores the token_usage for more verbose tracking.
-    chats[chat_id][-1].response_metadata['token_usage'] = { 'prompt_tokens': response.response_metadata.get('token_usage', {}).get('prompt_tokens') }
-    chats[chat_id].append(response)
+    messages = chats[chat_id]
+
+    response = llm.chat(messages, config)
+    if response:
+        chats[chat_id].append(response)
     
 
 from langchain_core.messages import HumanMessage, AIMessage
@@ -71,11 +65,12 @@ def get_chat_html(chat_id: str) -> str:
         # Skip messages that aren't Human or AI like SystemMessages
         if msg_class:
             meta = msg.response_metadata
+            print(f"Metadata for message: {meta}")  # Debugging output
             info = f"<div class='info'>"
 
             if msg_class == "assistant":
-                # Add completion token count
-                tokens = meta.get('token_usage', {}).get('completion_tokens', 0)
+                # Add completion token count CHANGE TO OTHER TOKEN IF NOT USING OLLAMA LOCAL
+                tokens = meta.get('eval_count', 0)
                 info += f"<div> <i class='fas fa-coins text-warning'></i> {tokens}</div>"
                 
                 # Dynamic mapping for model configuration parameters
