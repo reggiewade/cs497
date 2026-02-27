@@ -1,0 +1,59 @@
+Computing student tackles ‘technical
+debt’ with prestigious Department of
+Energy award
+December 23, 2025
+
+Computing doctoral student Eric Melin conducts research at Oak Ridge National Laboratory. Photo provided by
+Melin.
+
+Eric Melin, a third-year doctoral student in the computing program, is one of 79 doctoral students
+from across the U.S. selected for the Department of Energy’s prestigious Office of Science
+Graduate Student Research Program
+For Melin, this award not only validates the critical nature and promise of his research, but it also
+empowers his patriotic sensibilities and desire to use his skills to serve his country.
+
+Of his program placement at Oak Ridge National Laboratory, Melin said “receiving this award is a
+tremendous honor. I’m excited to work on research that I can be truly proud of and that has realworld impact. The experience has been incredibly rewarding. I’ve had the chance to work alongside
+brilliant scientists on fascinating problems, and I’m gaining a real sense of what it’s like to work at a
+national lab. Having the opportunity to contribute to the DOE is especially meaningful to me,
+because I’ve always wanted to serve the country I call home. My mother came here as an immigrant,
+and I feel a strong sense of responsibility to give back.”
+
+Eric Melin poses for a photo at Oak Ridge national Laboratory by Frontier, the
+
+world’s first exascale supercomputer. Photo provided by Melin.
+In his research, Melin applies AI and data science techniques to analyze scientific software,
+managing technical debt to improve its quality, maintainability and reliability. “Scientific software” is
+software that domain scientists write to complete specific scientific and research-related functions.
+
+A key challenge with scientific software is that the scientists programming it may — or may not —
+have a formal background in software development. Combined with the pressure to advance
+research and meet strict deadlines, this may lead scientists to create shortcuts in their software to
+expedite results.
+These shortcuts are referred to as “technical debt” and could prove expensive, time-intensive and a
+poor use of resources in the long run.
+IBM defines technical debt as “the future costs associated with relying on shortcuts or suboptimal
+decisions made during software development. Also called code debt or design debt, these
+compromises are primarily due to quick fixes, poor documentation and reliance on outdated code.
+Over time, this debt must be addressed, requiring additional effort. This ‘repayment’ typically
+involves refactoring, debugging and ongoing code maintenance.”
+Fortunately, Melin is already making headway addressing this technical debt with his method.
+“I recently finished my first proposed project, which focuses on automatically identifying and
+classifying different types of technical debt across several software artifacts,” Melin said. “By
+extracting text from selected DOE code repositories and applying my trained classifier, I can detect
+instances where debt is being admitted, helping practitioners to remediate and correct these
+shortcomings in the future.”
+Melin is thankful for the support he has received along the way.
+“I am very grateful for my mentors and my time at Boise State which has shaped me into the
+computer scientist and researcher I am today,” he said. “A special thanks to Nasir Eisty for
+encouraging me to apply for this fellowship and the countless others that supported me in the
+application process. I am extremely proud to represent the School of Computing and Boise State
+with this award.”
+
+OFFICE OF COMMUNICATIONS AND MARKETING
+
+communications@boisestate.edu
+(208) 426-1577
+Alumni and Friends Center
+
+

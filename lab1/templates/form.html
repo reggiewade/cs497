@@ -126,6 +126,12 @@
 
                 <div class="col-auto"><label for="max_tokens" class="form-label mb-0">Token Limit</label></div>
                 <div class="col-auto"><input type="number" class="form-control" id="max_tokens" name="max_tokens" min="1" value={{ max_tokens }}></div>
+                <div class="col-auto">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="rag_enabled" name="rag_enabled">
+                        <label class="form-check-label" for="rag_enabled">Enable RAG</label>
+                    </div>
+                    </div>
                 <div class="col-auto ms-auto">
                     <button type="submit" class="btn btn-primary">Send</button>
                 </div>

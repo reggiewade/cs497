@@ -1,0 +1,75 @@
+New grant fuels research on energy–
+water resilience
+December 23, 2025
+
+Irene Cionni, a senior research scholar in Boise State’s Department of Geosciences, has been
+awarded a seed grant from I-CREWS (Idaho Community-engaged Resilience for Energy-Water
+Systems), a National Science Foundation EPSCoR program. The seed grant enables her to advance
+studies on compound energy drought — a weather phenomenon that poses significant challenges to
+Idaho’s energy-water systems.
+
+Irene Cionni, Ph.D., Senior Research Scholar in Boise State’s Department of Geosciences
+
+Dunkelflauten: a German phrase for an Idaho
+energy challenge
+Compound energy drought occurs when multiple renewable energy sources experience
+
+simultaneous drops in generation. Imagine a week in early December with dark, cloudy and windless
+days, following a year of drought with little to no rain or snowfall. The result? Energy shortages from
+a variety of sources.
+In Germany, they call these events “dunkelflauten,” or “dark doldrums.” Over the last decade,
+dunkelflauten have been documented with increasing frequency, especially in the northern
+hemisphere. The Pacific Northwest’s 2023-24 concurrent drought and heat waves stand as a recent
+example.
+Dunkelflauten present significant challenges for systems that rely heavily on renewable energy
+sources, like those in Idaho. In 2024, 69% of Idaho’s total in-state generated energy came from
+renewable resources, namely hydropower, making Idaho the fifth-highest state in terms of
+renewable-energy shares of electricity. Understanding how dunkelflauten form and the effects they
+have on energy systems could help energy management systems anticipate and meet these challenges
+more efficiently. This is the task Cionni and her team have undertaken.
+
+Characterizing complicated energy events
+Cionni brings 15 years of experience in global and regional climate modeling and atmosphericchemistry research with leadership roles at the Italian National Agency for New Technologies,
+Energy, and Sustainable Economic Development, and extensive collaborations with the United
+States’ National Center for Atmospheric Research (NCAR).
+To investigate dunkelflauten from a variety of earth science and energy policy angles, Cionni leads a
+multidisciplinary team from Boise State. Co-investigators include geoscience professor Alejandro
+Flores and associate professor Stephanie Lenhart from the School of Public Service and Energy
+Policy Institute. Their respective knowledge bases in hydrology and the power grid/environmental
+governance, combined with Cionni’s specialization in atmospheric dynamics, allow them to fully
+characterize compound energy drought events and their effects on Idaho’s current power systems.
+The team’s research process includes exploring a variety of data, model sets and simulations related
+to the frequency, intensity and duration of dunkelflauten in Idaho. They create and use cutting-edge
+machine-learning algorithms to analyze atmospheric data from NCAR models. This process allows
+them to identify weather regimes — large-scale, recurring circulation patterns – that contribute to
+dunkelflauten.
+
+Weather regime characterization and associated near-surface wind anomalies over the Northwestern United States
+during the historical period (2000–2009) The top panels show four dominant cold-season large-scale circulation
+patterns (weather regimes) identified from CESM2-LE geopotential height anomalies. The bottom panels display
+the associated 100-m wind speed anomalies
+
+Focusing on recurring Pacific Northwest weather structures, Cionni analyzes weather research
+forecasting models to fine-tune large-scale climate information. For evaluation and validation, she
+also reviews climate simulations with ERA5, a global reanalysis dataset produced by the European
+Centre for Medium-Range Weather Forecasts.
+
+Implications for energy management
+When combined with existing data on regional system capacities for wind and solar, Cionni and her
+team hope to create new models that can surpass current weather forecasting abilities — for
+example, increased prediction reliability over longer time spans — and inform current energy
+management systems. Such information could increase the capacity and efficiency of Pacific
+Northwest energy-water systems, a potential win for energy management systems and residents.
+“I never think of my research as something that needs to stay in a paper or a laboratory,” Cionni said.
+“My approach with this science is to do something that can support society, improve the life and
+well-being of people.”
+This publication was made possible by the NSF Idaho EPSCoR Program and by the National Science
+Foundation under award number OIA-2242769.
+
+OFFICE OF COMMUNICATIONS AND MARKETING
+
+communications@boisestate.edu
+(208) 426-1577
+Alumni and Friends Center
+
+
