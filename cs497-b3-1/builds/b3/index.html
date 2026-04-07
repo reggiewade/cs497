@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forbidden Island</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS VARIABLES & RESET
+═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Tile state colours */
+  --dry:              #8b7765;
+  --dry-dark:         #6b5a4e;
+  --flooded:          #4682b4;
+  --flooded-dark:     #2c5f8a;
+  --flooded-shimmer:  #6aaad4;
+  --sunk:             #1a1a1a;
+
+  /* Deck colours */
+  --treasure-deck:    #0a05a0;
+  --treasure-discard: #060480;
+  --flood-deck:       #1e90ff;
+  --flood-discard:    #0064b4;
+
+  /* Panel colours */
+  --panel-bg:         #3c3c50;
+  --panel-border:     #5a5a78;
+  --btn:              #646478;
+  --btn-hover:        #8282a0;
+  --btn-active:       #a0a0c8;
+
+  /* Player colours */
+  --explorer:   #2d9e2d;
+  --engineer:   #c82020;
+  --messenger:  #b4b4b4;
+  --pilot:      #1464ff;
+  --diver:      #282828;
+  --navigator:  #daa520;
+
+  /* Treasure colours */
+  --fire:   #ff6400;
+  --stone:  #8b8989;
+  --wind:   #c8c8ff;
+  --ocean:  #0096c8;
+
+  /* UI chrome */
+  --bg:           #0d1117;
+  --surface:      #161b22;
+  --border:       #30363d;
+  --text:         #e6edf3;
+  --text-muted:   #8b949e;
+  --status-bar:   #1c2028;
+  --highlight:    rgba(255,255,255,0.08);
+  --shadow:       0 4px 16px rgba(0,0,0,0.6);
+  --cell-gap:     6px;
+
+  /* Typography */
+  --font-display: 'Arial', sans-serif;
+  --font-body:    'Arial', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OUTER LAYOUT
+═══════════════════════════════════════════════════════════════════════════ */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 8px;
+  gap: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE BOARD GRID  (6 × 6 cells, each cell is a fixed aspect ratio box)
+═══════════════════════════════════════════════════════════════════════════ */
+#board {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(60px, 180px));
+  grid-template-rows: repeat(6, 1fr);
+  gap: var(--cell-gap);
+  min-height: 0;
+  margin: auto;
+}
+
+/* ── Base cell ──────────────────────────────────────────────────────────── */
+.cell {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  max-width: 180px;
+  max-height: 360px;
+}
+
+.cell.empty {
+  background: transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GAME TILES
+═══════════════════════════════════════════════════════════════════════════ */
+.tile {
+  background: var(--dry);
+  border: 1.5px solid rgba(0,0,0,0.4);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow), 0 0 0 2px rgba(255,255,255,0.2);
+  z-index: 10;
+}
+
+.tile.selected {
+  box-shadow: var(--shadow), 0 0 0 2.5px #fff;
+  z-index: 20;
+}
+
+/* Tile state variants */
+.tile.dry {
+  background: linear-gradient(145deg, #9e8872 0%, #7a6452 60%, #5c4a38 100%);
+}
+
+.tile.flooded {
+  background: linear-gradient(160deg, var(--flooded-shimmer) 0%, var(--flooded) 45%, var(--flooded-dark) 100%);
+  animation: flood-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes flood-shimmer {
+  0%, 100% { filter: brightness(1); }
+  50%       { filter: brightness(1.12); }
+}
+
+.tile.sunk {
+  background: var(--sunk);
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.tile.sunk::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent, transparent 4px,
+    rgba(255,255,255,0.04) 4px, rgba(255,255,255,0.04) 5px
+  );
+}
+
+/* Tile name */
+.tile-name {
+  font-family: var(--font-display);
+  font-size: clamp(7px, 1.1vw, 11px);
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  text-align: center;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2px;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.tile.flooded .tile-name { color: #e8f4ff; }
+.tile.sunk    .tile-name { opacity: 0; }
+
+/* ── Tile bottom row: treasure icon + player dots ────────────────────────── */
+.tile-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  min-height: 18px;
+}
+
+/* ── Treasure icon ───────────────────────────────────────────────────────── */
+.treasure-icon {
+  width: clamp(14px, 3vw, 36px);
+  height: clamp(14px, 3vw, 36px);
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(8px, 2vw, 42px);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.12s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.treasure-icon:hover { transform: scale(1.2); }
+
+.treasure-icon.fire    { background: var(--fire);    color: #fff; }
+.treasure-icon.stone   { background: var(--stone);   color: #1a1a1a; }
+.treasure-icon.wind    { background: var(--wind);    color: #333; }
+.treasure-icon.ocean   { background: var(--ocean);   color: #fff; }
+
+/* ── Player dots stack (bottom-right) ────────────────────────────────────── */
+.player-dots {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  align-items: flex-end;
+}
+
+.player-dot {
+  width:  clamp(8px, 2.5vw, 46px);
+  height: clamp(8px, 2.5vw, 46px);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.player-dot:hover { transform: scale(1.3); }
+
+.player-dot.explorer  { background: var(--explorer); }
+.player-dot.engineer  { background: var(--engineer); }
+.player-dot.messenger { background: var(--messenger); }
+.player-dot.pilot     { background: var(--pilot); }
+.player-dot.diver     { background: var(--diver); border-color: #555; }
+.player-dot.navigator { background: var(--navigator); }
+
+/* ── Tile images (when available) ────────────────────────────────────────── */
+.tile-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.tile > *:not(.tile-image) { position: relative; z-index: 1; }
+
+.tile.flooded .tile-image {
+  filter: saturate(0.5) brightness(0.6);
+  mix-blend-mode: multiply;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DECK / DISCARD CELLS  (rows 0 cols 0,1,4,5)
+═══════════════════════════════════════════════════════════════════════════ */
+.deck-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 6px 4px 4px;
+  border: 1.5px solid rgba(0,0,0,0.4);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+
+.deck-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow), 0 0 0 2px rgba(255,255,255,0.15);
+}
+
+.deck-cell.treasure-deck    { background: linear-gradient(160deg, #e848a0 0%, var(--treasure-deck) 100%); }
+.deck-cell.treasure-discard { background: linear-gradient(160deg, #060480 0%, var(--treasure-discard) 100%); }
+.deck-cell.flood-deck       { background: linear-gradient(160deg, #060480 0%, var(--flood-deck) 100%); }
+.deck-cell.flood-discard    { background: linear-gradient(160deg, #1878cc 0%, var(--flood-discard) 100%); }
+
+.deck-label {
+  font-family: var(--font-display);
+  font-size: clamp(6px, 0.9vw, 14px);
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.deck-count {
+  font-family: var(--font-display);
+  font-size: clamp(14px, 2.2vw, 26px);
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.deck-top-card {
+  font-family: var(--font-body);
+  font-size: clamp(6px, 0.85vw, 12px);
+  color: rgba(255,255,255,0.8);
+  text-align: center;
+  margin-top: 3px;
+  line-height: 1.3;
+  overflow: hidden;
+  max-height: 40px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACTION PANEL  (row 1, col 0)
+═══════════════════════════════════════════════════════════════════════════ */
+.action-panel {
+  background: var(--panel-bg);
+  border: 1.5px solid var(--panel-border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 3px;
+  gap: 2px;
+}
+
+.panel-label {
+  font-family: var(--font-display);
+  font-size: clamp(6px, 0.85vw, 9px);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Direction button grid */
+.dir-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2px;
+  flex: 1;
+  width: 100%;
+  max-height: 100%;
+}
+
+.dir-btn {
+  background: var(--btn);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 3px;
+  color: var(--text);
+  font-size: clamp(8px, 1.1vw, 13px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, transform 0.08s;
+  aspect-ratio: 1;
+  min-height: 0;
+}
+
+.dir-btn:hover  { background: var(--btn-hover); }
+.dir-btn:active { background: var(--btn-active); transform: scale(0.92); }
+.dir-btn.center { background: rgba(200,50,50,0.5); }
+.dir-btn.center:hover { background: rgba(220,60,60,0.7); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MENU PANEL  (row 1, col 5)
+═══════════════════════════════════════════════════════════════════════════ */
+.menu-panel {
+  background: var(--panel-bg);
+  border: 1.5px solid var(--panel-border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px;
+  gap: 3px;
+}
+
+.menu-btn {
+  width: 100%;
+  padding: clamp(3px, 0.6vw, 7px) 6px;
+  background: var(--btn);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(6px, 0.85vw, 9px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s, transform 0.08s;
+  flex: 1;
+}
+
+.menu-btn:hover  { background: var(--btn-hover); }
+.menu-btn:active { background: var(--btn-active); transform: scale(0.96); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PLAYER STATUS CARDS  (corners rows 4-5)
+═══════════════════════════════════════════════════════════════════════════ */
+.player-status {
+  border-radius: 6px;
+  border: 2px solid rgba(0,0,0,0.3);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.player-status:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow), 0 0 0 2px rgba(255,255,255,0.25);
+}
+
+.player-status.explorer  { background: linear-gradient(150deg, #3ab43a, #1a741a); }
+.player-status.engineer  { background: linear-gradient(150deg, #e04040, #901010); }
+.player-status.messenger { background: linear-gradient(150deg, #d0d0d0, #909090); color: black; }
+.player-status.pilot     { background: linear-gradient(150deg, #3070ff, #1040bb); }
+.player-status.diver     { background: linear-gradient(150deg, #404040, #181818); }
+.player-status.navigator { background: linear-gradient(150deg, #e8c030, #a07818); }
+
+.player-status-role {
+  font-family: var(--font-display);
+  font-size: clamp(7px, 1vw, 11px);
+  font-weight: 700;
+  /*color: #fff;*/
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding-bottom: 3px;
+  margin-bottom: 3px;
+}
+
+.player-status-props {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.player-prop {
+  font-family: var(--font-body);
+  font-size: clamp(9px, 1vw, 14px);
+  /*color: rgba(255,255,255,0.85);*/
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.player-prop .prop-val { font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════════════════════════════════════════════ */
+#status-bar {
+  flex: 0 0 auto;
+  background: var(--status-bar);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 0;
+  height: 36px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.status-segment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.status-segment:first-child { padding-left: 0; }
+.status-segment:nth-child(5) { flex: 1; justify-content: center; }
+.status-segment:last-child  { border-right: none; padding-right: 0; }
+
+.status-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-display);
+  flex-shrink: 0;
+}
+
+.status-value {
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Water level indicator */
+.water-level-bar {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.water-pip {
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
+.water-pip.active {
+  background: var(--flood-deck);
+  box-shadow: 0 0 6px rgba(30,144,255,0.5);
+}
+
+.water-pip.danger { background: #ff4040; box-shadow: 0 0 6px rgba(255,64,64,0.6); }
+
+/* Collected treasures */
+.treasure-collected {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.treasure-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  border: 1.5px solid rgba(0,0,0,0.3);
+  opacity: 0.25;
+  transition: opacity 0.4s, transform 0.4s;
+}
+
+.treasure-badge.collected {
+  opacity: 1;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.treasure-badge.fire    { background: var(--fire);  color: #fff; }
+.treasure-badge.stone   { background: var(--stone); color: #1a1a1a; }
+.treasure-badge.wind    { background: var(--wind);  color: #333; }
+.treasure-badge.ocean   { background: var(--ocean); color: #fff; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONNECTION BADGE
+═══════════════════════════════════════════════════════════════════════════ */
+#conn-badge {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 100;
+  transition: opacity 0.3s;
+}
+
+.conn-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #555;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+#conn-badge.connected .conn-dot    { background: #3fb950; box-shadow: 0 0 6px rgba(63,185,80,0.6); }
+#conn-badge.connecting .conn-dot   { background: #e3b341; animation: pulse 1s ease-in-out infinite; }
+#conn-badge.disconnected .conn-dot { background: #f85149; }
+
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODAL (item selection, help)
+═══════════════════════════════════════════════════════════════════════════ */
+#modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(3px);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+#modal-overlay.open { display: flex; }
+
+#modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 260px;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  animation: modal-in 0.2s ease;
+}
+
+@keyframes modal-in {
+  from { opacity:0; transform: scale(0.92) translateY(-10px); }
+  to   { opacity:1; transform: scale(1)    translateY(0); }
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  letter-spacing: 0.04em;
+}
+
+.modal-items { display: flex; flex-direction: column; gap: 6px; }
+
+.modal-item {
+  padding: 9px 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.modal-item:hover { background: var(--btn-hover); border-color: rgba(255,255,255,0.2); }
+
+.modal-cancel {
+  margin-top: 10px;
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 11px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  transition: background 0.1s;
+}
+
+.modal-cancel:hover { background: var(--highlight); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EVENT FLASH (brief tile/event highlight)
+═══════════════════════════════════════════════════════════════════════════ */
+@keyframes tile-flood-in {
+  0%   { box-shadow: 0 0 0 3px rgba(70,130,180,0.0); }
+  30%  { box-shadow: 0 0 0 5px rgba(70,130,180,0.9); }
+  100% { box-shadow: 0 0 0 2px rgba(70,130,180,0.2); }
+}
+
+@keyframes tile-sink-in {
+  0%   { filter: brightness(1); }
+  40%  { filter: brightness(2) saturate(0); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes tile-shore-in {
+  0%   { box-shadow: 0 0 0 0px rgba(139,199,101,0.0); }
+  30%  { box-shadow: 0 0 0 6px rgba(139,199,101,0.8); }
+  100% { box-shadow: 0 0 0 2px rgba(139,199,101,0.0); }
+}
+
+@keyframes player-move-in {
+  0%   { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+.flash-flood { animation: tile-flood-in 0.8s ease forwards; }
+.flash-sink  { animation: tile-sink-in  0.6s ease forwards; }
+.flash-shore { animation: tile-shore-in 0.8s ease forwards; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOLTIP
+═══════════════════════════════════════════════════════════════════════════ */
+[data-tip] { position: relative; }
+
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1c1c28;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+
+<body>
+<div id="conn-badge" class="connecting">
+  <span class="conn-dot"></span>
+  <span id="conn-text">CONNECTING</span>
+</div>
+
+<div id="app">
+  <div id="board"></div>
+
+  <div id="status-bar">
+    <div class="status-segment">
+      <span class="status-label">Player</span>
+      <span class="status-value" id="status-player">—</span>
+    </div>
+    <div class="status-segment">
+      <span class="status-label">Phase</span>
+      <span class="status-value" id="status-phase">—</span>
+    </div>
+    <div class="status-segment">
+      <span class="status-label">Actions</span>
+      <span class="status-value" id="status-actions">—</span>
+    </div>
+    <div class="status-segment">
+      <span class="status-label">Selected</span>
+      <span class="status-value" id="status-selected"></span>
+    </div>
+    <div class="status-segment">
+      <span class="status-value" id="status-message">Waiting for game…</span>
+    </div>
+    <div class="status-segment">
+      <span class="status-label">Water</span>
+      <div class="water-level-bar" id="water-pips"></div>
+    </div>
+    <div class="status-segment">
+      <div class="treasure-collected" id="treasure-collected"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-title" id="modal-title">Select an item</div>
+    <div class="modal-items" id="modal-items"></div>
+    <button class="modal-cancel" id="modal-cancel">CANCEL</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════════════════════════════════ */
+const GRID = 6;
+
+/* Board cell roles — mirrors board.py's special-cell logic exactly */
+const CELL_ROLES = {
+  '0,0': 'treasure-deck',
+  '0,1': 'treasure-discard',
+  '0,4': 'flood-deck',
+  '0,5': 'flood-discard',
+  '1,0': 'action-panel',
+  '1,5': 'menu-panel',
+  '4,0': 'player-status-0',
+  '4,5': 'player-status-1',
+  '5,0': 'player-status-2',
+  '5,1': 'player-status-3',
+  '5,4': 'player-status-4',
+  '5,5': 'player-status-5',
+};
+
+const PLAYER_STATUS_CELLS = [
+  [4,0],[4,5],[5,0],[5,1],[5,4],[5,5]
+];
+
+const TREASURE_SYMBOLS = { fire:'✶', stone:'◆', wind:'≋', ocean:'〜' };
+const TREASURE_NAMES   = {
+  'The Crystal of Fire': 'fire',
+  'The Statue of Wind':  'wind',
+  'The Earth Stone':     'stone',
+  "The Ocean's Chalice": 'ocean',
+};
+
+const DIRS = [
+  ['upleft','\\','upleft'], ['up','▲','up'],        ['upright','/','upright'],
+  ['left','◀','left'],      ['center','✕','center'], ['right','▶','right'],
+  ['downleft','/','downleft'],['down','▼','down'],  ['downright','\\','downright'],
+];
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════════════════ */
+let state    = null;   // full get_observation() snapshot
+let ws       = null;
+let selectedCell = null;  // [row,col] of currently selected tile
+let selectedPlayer = null; // used to move with navigator
+let helicopter = null;
+let sandbags = null;
+
+function getCurrentPlayer() {
+  for (let p of state.players) {
+    if (p.role === state.current_player) return p;
+  }
+  return null;
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   WEBSOCKET
+═══════════════════════════════════════════════════════════════════════════ */
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+  setConn('connecting');
+
+  ws.onopen  = () => { setConn('connected'); setStatusMessage('Connected to game engine'); }
+  ws.onclose = () => { setConn('disconnected'); setTimeout(connect, 3000); };
+  ws.onerror = () => setConn('disconnected');
+
+  ws.onmessage = ({ data }) => {
+    const msg = JSON.parse(data);
+    if (msg.type === 'state') {
+      state = msg.payload;
+      renderAll();
+    } else {
+      handleEvent(msg.type, msg.payload);
+    }
+  };
+}
+
+function send(action, args, player) {
+  //console.log(JSON.stringify({ action, player, args: args || {} }));
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action, player, args: args || {} }));
+  }
+}
+
+function setConn(s) {
+  const el = document.getElementById('conn-badge');
+  el.className = s;
+  document.getElementById('conn-text').textContent = s.toUpperCase();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EVENT HANDLER  — apply incremental updates from the server
+═══════════════════════════════════════════════════════════════════════════ */
+function handleEvent(type, payload) {
+  switch (type) {
+    case 'state':
+      state = payload;
+      renderAll();
+      break;
+
+    case 'status':
+      console.log("Received status event:", payload);
+      if (state && state.phase_state && payload.actions) {
+        state.phase_state.action = payload.actions;
+        renderStatusBar();
+      }
+      break;
+
+    case 'move':
+      if (state) applyMove(payload.move, payload.tile);
+      break;
+
+    case 'lift':
+      if (state) {
+        let players = payload.lift.split(',').map(s => s.trim())
+        for (let p of players) applyMove(p, payload.tile);
+      }
+      break;
+
+    case 'flood':
+      if (state) applyFlood(payload);
+      break;
+
+    case 'shore':
+      if (state) applyShore(payload);
+      break;
+
+    case 'phase':
+      if (state) {
+        state.phase       = payload.phase;
+        state.phase_state = payload.state;
+        if (payload.player) state.current_player = payload.player;
+        renderStatusBar();
+      }
+      break;
+
+    case 'waters_rise':
+      if (state) {
+        state.water_level = payload.waters_rise;
+        renderStatusBar();
+        flashMessage(`⚠ Waters rise to level ${payload.waters_rise}!`);
+      }
+      break;
+
+    case 'draw':
+      console.log("draw event", payload);
+      updateDeckSizes();
+      break;
+
+
+    case 'player':
+      console.log("player event", payload);
+      for (let i = 0; i < state.players.length; ++i) {
+        if (state.players[i].role === payload.player.role) {
+          state.players[i] = payload.player;
+          console.log("Updating", state.players);
+          renderRoleStatus(payload.player.role);
+          break;
+        }
+      }
+      break;
+
+    case 'shuffle':
+      updateDeckSizes();
+      break;
+
+    case 'treasure':
+      if (state && payload.collect) {
+        const key = Object.keys(TREASURE_NAMES).find(k => k === payload.collect)
+                    || payload.collect;
+        const shortKey = TREASURE_NAMES[key] || key;
+        state.treasures[shortKey] = true;
+        renderStatusBar();
+        flashMessage(`✦ ${payload.collect} collected!`);
+      }
+      break;
+
+    case 'game_over':
+      flashMessage(payload.result ? '🏆 VICTORY!' : '💀 GAME OVER', 6000);
+      break;
+
+    case 'message':
+      setStatusMessage(payload.text);
+      break;
+  }
+}
+
+/* ── Incremental tile updates (avoids full re-render on every event) ─────── */
+function applyMove(role, tile) {
+  console.log(`Moving ${role} to ${tile}`);
+  // Update player positions in state
+  if (!role || !tile) return;
+  const p = state.players.find(p => p.role === role);
+  const newTile = state.tiles.find(t => t.name === tile);
+  if (!p || !newTile) return;
+
+  // Remove from old tile
+  const oldTile = state.tiles.find(t => t.position &&
+    t.position[0] === p.position[0] && t.position[1] === p.position[1]);
+  if (oldTile) oldTile.players = oldTile.players.filter(r => r !== role);
+
+  // Add to new tile
+  p.position = newTile.position;
+  if (!newTile.players.includes(role)) newTile.players.push(role);
+
+  // Re-render affected cells
+  renderCell(oldTile?.position?.[0], oldTile?.position?.[1]);
+  renderCell(newTile.position[0], newTile.position[1]);
+}
+
+function applyFlood(payload) {
+  if (payload.flood) {
+    const tile = state.tiles.find(t => t.name === payload.flood);
+    if (tile) {
+      tile.state = 'flooded';
+      flashCell(tile.position[0], tile.position[1], 'flash-flood');
+      renderCell(tile.position[0], tile.position[1]);
+    }
+    state.flood_deck_size = Math.max(0, (state.flood_deck_size || 1) - 1);
+    renderFloodDeckCell(0, 4);
+    if (!state.flood_deck_size) state.flood_discard = []
+    state.flood_discard.push(tile.name);
+    renderFloodDiscardCell(0, 5);
+  }
+  if (payload.sunk && typeof payload.sunk === 'string' && !payload.sunk.match(/^[a-z]+$/)) {
+    // It's a tile name (role names are lowercase single words)
+    const tile = state.tiles.find(t => t.name === payload.sunk);
+    if (tile) {
+      tile.state = 'sunk';
+      flashCell(tile.position[0], tile.position[1], 'flash-sink');
+      renderCell(tile.position[0], tile.position[1]);
+    }
+  }
+  if (payload.relocate) {
+    // Player was moved — handled server-side; request fresh state
+    //requestState();
+    const from = state.tiles.find(t => t.name === payload.from);
+    const to = state.tiles.find(t => t.name === payload.to);
+    const relocatedPlayer = state.players.find(p => p.role === payload.relocate);
+    console.log(state.tiles);
+    from.players = from.players.filter(e => payload.relocate !== e);
+    to.players.push(payload.relocate);
+    if (relocatedPlayer && to) relocatedPlayer.position = to.position;
+    console.log(state.tiles);
+    renderCell(from.position[0], from.position[1]);
+    renderCell(to.position[0], to.position[1]);
+
+  }
+}
+
+function applyShore(payload) {
+  if (!payload.shore) return;
+  const tile = state.tiles.find(t => t.name === payload.shore);
+  if (tile) {
+    tile.state = 'dry';
+    flashCell(tile.position[0], tile.position[1], 'flash-shore');
+    renderCell(tile.position[0], tile.position[1]);
+  }
+}
+
+function updateDeckSizes() {
+  // Request a fresh state snapshot for deck counts
+  requestState();
+}
+
+function requestState() {
+  // TODO: Ask the server for a fresh state
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FULL RENDER
+═══════════════════════════════════════════════════════════════════════════ */
+function renderAll() {
+  if (!state) return;
+  renderBoard();
+  renderStatusBar();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOARD RENDER
+═══════════════════════════════════════════════════════════════════════════ */
+function renderBoard() {
+  const board = document.getElementById('board');
+
+  // Build or reuse the 36 cell elements
+  if (board.children.length !== GRID * GRID) {
+    board.innerHTML = '';
+    for (let r = 0; r < GRID; r++) {
+      for (let c = 0; c < GRID; c++) {
+        const cell = document.createElement('div');
+        cell.id = `cell-${r}-${c}`;
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        board.appendChild(cell);
+      }
+    }
+  }
+
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      renderCell(r, c);
+    }
+  }
+}
+
+function renderCell(r, c) {
+  if (r == null || c == null) return;
+  const el   = document.getElementById(`cell-${r}-${c}`);
+  if (!el) return;
+
+  const key  = `${r},${c}`;
+  const role = CELL_ROLES[key];
+
+  el.className = 'cell';
+  el.innerHTML = '';
+  el.onclick   = null;
+
+  if (role === 'treasure-deck')    { renderDeckCell(r, c, el); return; }
+  if (role === 'treasure-discard') { renderDiscardCell(r, c, el); return; }
+  if (role === 'flood-deck')       { renderFloodDeckCell(r, c, el); return; }
+  if (role === 'flood-discard')    { renderFloodDiscardCell(r, c, el); return; }
+  if (role === 'action-panel')     { renderActionPanel(el); return; }
+  if (role === 'menu-panel')       { renderMenuPanel(el); return; }
+  if (role && role.startsWith('player-status-')) {
+    renderPlayerStatus(el, parseInt(role.split('-')[2])); return;
+  }
+
+  // ── Game tile ──────────────────────────────────────────────────────────
+  const tile = state?.tiles?.find(t => t.position?.[0] === r && t.position?.[1] === c);
+  if (!tile) {
+    el.classList.add('empty');
+    return;
+  }
+
+  el.classList.add('tile', tile.state);
+  el.dataset.tileName = tile.name;
+
+  // Tile name
+  const nameEl = document.createElement('div');
+  nameEl.className = 'tile-name';
+  nameEl.textContent = tile.name;
+  el.appendChild(nameEl);
+
+  // Footer row
+  const footer = document.createElement('div');
+  footer.className = 'tile-footer';
+
+  // Treasure icon (bottom-left)
+  const treasureEl = document.createElement('div');
+  if (tile.treasure && tile.state !== 'sunk') {
+    const icon = document.createElement('div');
+    icon.className = `treasure-icon ${tile.treasure}`;
+    icon.textContent = TREASURE_SYMBOLS[tile.treasure] || '?';
+    icon.title = tile.treasure;
+    icon.dataset.tip = tile.treasure.charAt(0).toUpperCase() + tile.treasure.slice(1);
+    icon.onclick = (e) => {
+      e.stopPropagation();
+      send('collect', {
+        treasure: Object.keys(TREASURE_NAMES).find(k => TREASURE_NAMES[k] === tile.treasure),
+        row: r, col: c
+      });
+    };
+    treasureEl.appendChild(icon);
+  }
+  footer.appendChild(treasureEl);
+
+  // Player dots (bottom-right)
+  const dotsEl = document.createElement('div');
+  dotsEl.className = 'player-dots';
+  (tile.players || []).forEach(role => {
+    const dot = document.createElement('div');
+    dot.className = `player-dot ${role}`;
+    dot.title = role;
+    dot.dataset.tip = role.charAt(0).toUpperCase() + role.slice(1);
+    dot.onclick = (e) => {
+      console.log("Clicked on ", role);
+      selectedPlayer = selectedPlayer == role ? null : role;
+      document.getElementById('status-selected').textContent = `${selectedPlayer ?? ''}`;
+      e.stopPropagation();
+
+    }
+    dotsEl.appendChild(dot);
+  });
+  footer.appendChild(dotsEl);
+
+  el.appendChild(footer);
+
+  // Tile click → select / navigate
+  el.onclick = () => handleTileClick(r, c, tile);
+
+  // Highlight if selected
+  if (selectedCell && selectedCell[0] === r && selectedCell[1] === c) {
+    el.classList.add('selected');
+  }
+}
+
+/* ── Deck cells ──────────────────────────────────────────────────────────── */
+function renderDeckCell(r, c, el) {
+  el = el || document.getElementById(`cell-${r}-${c}`);
+  el.className = 'cell deck-cell treasure-deck';
+  el.innerHTML = `
+    <span class="deck-label">Treasure<br>Deck</span>
+    <span class="deck-count">${state?.treasure_deck_size ?? '—'}</span>
+    <span class="deck-top-card">cards remaining</span>`;
+  el.onclick = () => send('draw');
+}
+
+function renderDiscardCell(r, c, el) {
+  el = el || document.getElementById(`cell-${r}-${c}`);
+  el.className = 'cell deck-cell treasure-discard';
+  const discard = state?.treasure_discard || [];
+  const top = discard.length ? discard[discard.length - 1] : null;
+  const topShort = top ? (TREASURE_NAMES[top] || top) : null;
+  el.innerHTML = `
+    <span class="deck-label">Treasure<br>Discard</span>
+    <span class="deck-count">${discard.length}</span>
+    ${top ? `<span class="deck-top-card">${top}</span>` : ''}
+    ${topShort && TREASURE_SYMBOLS[topShort] ? `<span style="font-size:clamp(14px,2.2vw,26px);margin-top:2px">${TREASURE_SYMBOLS[topShort]}</span>` : ''}`;
+}
+
+function renderFloodDeckCell(r, c, el) {
+  el = el || document.getElementById(`cell-${r}-${c}`);
+  el.className = 'cell deck-cell flood-deck';
+  el.innerHTML = `
+    <span class="deck-label">Flood<br>Deck</span>
+    <span class="deck-count">${state?.flood_deck_size ?? '—'}</span>
+    <span class="deck-top-card">cards remaining</span>`;
+  el.onclick = () => { send('flood') };
+}
+
+function renderFloodDiscardCell(r, c, el) {
+  el = el || document.getElementById(`cell-${r}-${c}`);
+  el.className = 'cell deck-cell flood-discard';
+  const discard = state?.flood_discard || [];
+  let cards = '';
+  for (let card of state.flood_discard) cards += `<span>${card}</span>`;
+  el.innerHTML = `
+    <span class="deck-label">Flood<br>Discard</span>
+    <span class="deck-count">${discard.length}</span>
+    ${cards}`;
+  el.onclick = () => { showModal('Flood Discard', state.flood_discard ) };
+}
+
+/* ── Action panel ────────────────────────────────────────────────────────── */
+function renderActionPanel(el) {
+  el.className = 'cell action-panel';
+  const label = document.createElement('div');
+  label.className = 'panel-label';
+  label.textContent = 'Move';
+  el.appendChild(label);
+
+  const grid = document.createElement('div');
+  grid.className = 'dir-grid';
+
+  DIRS.forEach(([dir, symbol, cls]) => {
+    const btn = document.createElement('button');
+    btn.className = `dir-btn ${cls === 'center' ? 'center' : ''}`;
+    btn.textContent = symbol;
+    btn.title = dir === 'center' ? 'Stay / Cancel' : `Move ${dir}`;
+    btn.onclick = () => {
+      if (dir === 'center') {
+        send('skip');
+      } else {
+        send('move', { direction: dir });
+      }
+    };
+    grid.appendChild(btn);
+  });
+
+  el.appendChild(grid);
+}
+
+/* ── Menu panel ──────────────────────────────────────────────────────────── */
+function renderMenuPanel(el) {
+  el.className = 'cell menu-panel';
+  const label = document.createElement('div');
+  label.className = 'panel-label';
+  label.textContent = 'Menu';
+  el.appendChild(label);
+
+  [
+    ['Skip',  () => send('skip')],
+    ['Shore', () => promptShore()],
+    ['Give',  () => promptGive()],
+    ['Save',  () => send('save')],
+    ['Help',  () => showHelp()],
+  ].forEach(([txt, handler]) => {
+    const btn = document.createElement('button');
+    btn.className = 'menu-btn';
+    btn.textContent = txt;
+    btn.onclick = handler;
+    el.appendChild(btn);
+  });
+}
+
+/* ── Player status ───────────────────────────────────────────────────────── */
+function renderRoleStatus(role) {
+  for (let i = 0; i < state?.players.length; ++i) {
+    console.log("Checking", i, state?.players[i], role);
+    if (state?.players[i].role === role) {
+        const coords = PLAYER_STATUS_CELLS[i];
+        const el   = document.getElementById(`cell-${coords[0]}-${coords[1]}`);
+        console.log("Rendering", coords);
+        renderPlayerStatus(el, i);
+        return;
+    }
+  }
+}
+function renderPlayerStatus(el, idx) {
+  const playerData = state?.players?.[idx];
+  if (!playerData) {
+    el.className = 'cell empty';
+    return;
+  }
+
+  const role = playerData.role;
+  el.className = `cell player-status ${role}`;
+
+  const roleEl = document.createElement('div');
+  roleEl.className = 'player-status-role';
+  roleEl.textContent = role.toUpperCase();
+  el.replaceChildren(roleEl);
+
+  const props = document.createElement('div');
+  props.className = 'player-status-props';
+
+  const allCards = [...(playerData.treasure_cards || []), ...(playerData.action_cards || [])];
+  const cardCounts = {};
+  allCards.forEach(c => cardCounts[c] = (cardCounts[c] || 0) + 1);
+
+  Object.entries(cardCounts).forEach(([card, count]) => {
+    const shortName = TREASURE_NAMES[card] || card;
+    const sym = TREASURE_SYMBOLS[shortName] || '';
+    addProp(props, card, count, role);
+  });
+
+  el.appendChild(props);
+
+  el.onclick = () => {
+    showModal(`${role.toUpperCase()}'s Cards`,
+      allCards.length ? allCards : ['(no cards)'],
+      (card) => {
+        showModal(`Discard ${card}?`, [ "Yes", "No" ], (ans) => {
+          if (ans === "Yes") send('discard', {'card': card }, role);
+        })
+      }
+    );
+  };
+}
+
+function addProp(container, label, val, role) {
+  const el = document.createElement('div');
+  el.className = 'player-prop';
+  el.innerHTML = val
+    ? `<span class="prop-val">${val}</span> ${label}`
+    : label;
+  if (label === 'helicopter') el.onclick = (e) => { helicopter = helicopter === role ? null : role; e.stopPropagation(); document.getElementById('status-selected').textContent = helicopter ? 'helicopter' : ''; }
+  else if (label === 'sandbags') el.onclick = (e) => { sandbags = sandbags === role ? null : role; e.stopPropagation(); document.getElementById('status-selected').textContent = sandbags ? 'sandbags': ''; }
+  else el.onclick = (e) => {
+    showModal(`Discard ${label}?`, ["Yes", "No"], ans => {
+      if (ans !== 'Yes') return;
+      send('discard', { 'card': label, }, role);
+    })
+    e.stopPropagation();
+  }
+  container.appendChild(el);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATUS BAR RENDER
+═══════════════════════════════════════════════════════════════════════════ */
+function renderStatusBar() {
+  if (!state) return;
+
+  // Phase + actions
+  const phase   = state.phase || '—';
+  const actions = state.phase_state?.action ?? '—';
+  const cp      = state.current_player || '—';
+
+  document.getElementById('status-player').textContent = `${cp}`;
+  document.getElementById('status-phase').textContent = `${phase}`;
+  document.getElementById('status-actions').textContent = phase === 'action' ? actions : '—';
+
+  document.getElementById('status-player').className = `player-status ${cp}`;
+
+  // Water level pips
+  const pipsEl = document.getElementById('water-pips');
+  pipsEl.innerHTML = '';
+  for (let i = 1; i <= 9; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'water-pip'
+      + (i <= state.water_level ? ' active' : '')
+      + (i >= 7 && i <= state.water_level ? ' danger' : '');
+    pipsEl.appendChild(pip);
+  }
+
+  // Collected treasures
+  const tcEl = document.getElementById('treasure-collected');
+  tcEl.innerHTML = '';
+  ['fire','wind','stone','ocean'].forEach(t => {
+    const badge = document.createElement('div');
+    badge.className = `treasure-badge ${t}${state.treasures?.[t] ? ' collected' : ''}`;
+    badge.textContent = TREASURE_SYMBOLS[t] || t[0].toUpperCase();
+    badge.title = t;
+    tcEl.appendChild(badge);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TILE CLICK HANDLING
+═══════════════════════════════════════════════════════════════════════════ */
+function handleTileClick(r, c, tile) {
+  console.log("Clicked on", tile, "state is", state);
+
+  if (helicopter) {
+    applyHelicopter(helicopter, tile);
+    helicopter = null;
+    document.getElementById('status-selected').textContent = '';
+    return;
+  }
+
+  if (sandbags) {
+    applySandbags(sandbags, tile);
+    sandbags = null;
+    document.getElementById('status-selected').textContent = '';
+    return;
+  }
+
+  const phase = state?.phase;
+  // During flood phase, clicking a flooded tile shores it up
+  if (phase === 'action') {
+    if (state.current_player == 'navigator' && selectedPlayer) {
+      let passenger = selectedPlayer;
+      showModal(`Move ${passenger} to ${tile.name}?`, ["Yes", "No"], (ans) => {
+        if (ans === "Yes") {
+          send('moveto', { row: r, col: c }, passenger);
+        }
+      });
+      selectedPlayer = null;
+      return;
+    }
+
+    if (state.current_player === 'pilot') {
+      let me = getCurrentPlayer();
+      if ((Math.abs(r - me.position[0]) + Math.abs(c - me.position[1]) > 1)) {
+        send('moveto', { row: r, col: c });
+        selectedCell = [r, c];
+        renderCell(r, c);
+        return;
+      }
+    }
+
+    if (tile.state === 'flooded') {
+      send('shore', { row: r, col: c });
+      return;
+    }
+    // Otherwise move to that tile
+    console.log("Sending moveto for ",r, c);
+    send('moveto', { row: r, col: c });
+    selectedCell = [r, c];
+    renderCell(r, c);
+  }
+}
+
+function applyHelicopter(pilot, tile) {
+  let groups = []
+  let populated = state.tiles.filter((t) => t.players.length != 0);
+  for (let tile of populated) {
+    console.log("Combining", tile);
+    for (let len = 1; len <= tile.players.length; len++) {
+      const combine = (start, combo) => {
+        if (combo.length === len) {
+          groups.push(combo);
+          return;
+        }
+        for (let i = start; i < tile.players.length; i++) {
+          combine(i + 1, [...combo, tile.players[i]]);
+        }
+      };
+      combine(0, []);
+    }
+  }
+
+  showModal(`Helicopter to ${tile.name}<br/><br/>Select sortie`, groups, (sortie) => {
+    console.log("Sending sortie", sortie);
+    send("helicopter", { "pilot": pilot, "players": sortie, "tile": [ tile.position[0], tile.position[1] ] });
+  });
+}
+
+function applySandbags(player, tile) {
+  showModal(`Use ${player}'s sandbag on ${tile.name}?`, ["Yes", "No"], (ans) => {
+    if (ans === "Yes") send('sandbag', { row: tile.position[0], col: tile.position[1] }, player);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════════════════════════════════ */
+function showModal(title, items, onSelect) {
+  document.getElementById('modal-title').innerHTML = title;
+  const itemsEl = document.getElementById('modal-items');
+  itemsEl.innerHTML = '';
+  items.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'modal-item';
+    el.textContent = item;
+    el.onclick = () => {
+      closeModal();
+      if (onSelect) onSelect(item);
+    };
+    itemsEl.appendChild(el);
+  });
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+document.getElementById('modal-cancel').onclick = closeModal;
+document.getElementById('modal-overlay').onclick = (e) => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+};
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ── Context-specific prompts ────────────────────────────────────────────── */
+function promptShore() {
+  const flooded = (state?.tiles || []).filter(t => t.state === 'flooded');
+  showModal('Shore up which tile?', flooded.map(t => t.name), (name) => {
+    send('shore', { row: name });  // engine accepts name string too
+  });
+}
+
+function promptGive() {
+  console.log("state", state);
+  const me = getCurrentPlayer()
+  if (!me) return;
+  const cards = [...(me.treasure_cards || []), ...(me.action_cards || [])];
+  if (!cards.length) { flashMessage('No cards to give.'); return; }
+  showModal('Give which card?', [...new Set(cards)], (card) => {
+    const others = state.players.filter(p => p.role !== me.role);
+    showModal(`Give ${card} to?`, others.map(p => p.role), (role) => {
+      send('give', { role, item: card });
+    });
+  });
+}
+
+function promptMove(r, c) {
+  const me = state?.current_player;
+  if (!me) return;
+  const others = state.players.filter(p => p.role !== me);
+
+  showModal('Move which player?', [...new Set(others)], (other) => {
+      send('moveto', { row: r, col: c, player: other });
+  });
+}
+
+function showHelp() {
+  showModal('Help', [
+    '➡  Use arrow buttons to step one tile',
+    '✕  Center button = end turn (skip)',
+    '🃏  Treasure deck — click to draw (draw phase)',
+    '🌊  Click a flooded tile to shore it up',
+    '💎  Click a treasure icon to collect',
+    '🔰  Give — hand a card to another player',
+    '📋  Player cards — click an item to use or discard',
+  ], null);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FLASH HELPERS
+═══════════════════════════════════════════════════════════════════════════ */
+function flashCell(r, c, cls) {
+  const el = document.getElementById(`cell-${r}-${c}`);
+  if (!el) return;
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+}
+
+let flashTimer = null;
+function flashMessage(text, duration = 3000) {
+  setStatusMessage(text);
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => {
+    setStatusMessage(state?.phase
+      ? `${state.current_player ?? ''} — ${state.phase} phase`
+      : '');
+  }, duration);
+}
+
+function setStatusMessage(text) {
+  document.getElementById('status-message').textContent = text || '';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════════════════ */
+// Pick up ?role=pilot from URL for human player identification
+const params = new URLSearchParams(location.search);
+
+// Build water pips (static structure)
+const pipsEl = document.getElementById('water-pips');
+for (let i = 0; i < 9; i++) {
+  const pip = document.createElement('div');
+  pip.className = 'water-pip';
+  pipsEl.appendChild(pip);
+}
+
+// Start WebSocket connection
+connect();
+</script>
+</body>
+</html>

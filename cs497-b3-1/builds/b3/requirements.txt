@@ -1,0 +1,10 @@
+dotenv
+fastapi
+langchain
+langchain-aws
+langchain-ollama
+langchain-openai
+langgraph
+pydantic
+uvicorn
+websockets
