@@ -18,11 +18,11 @@ from lib.state import GameState
 
 # Override the reactive implementations when you have your agents implemented
 from agents import messenger
-from agents import navigator
-from agents import engineer
-from agents import pilot
-from agents import diver
-from agents import explorer
+#from agents import navigator
+#from agents import engineer
+#from agents import pilot
+#from agents import diver
+#from agents import explorer
 
 #--------------------------------------------------------------------------------------------------
 # Private state
@@ -189,12 +189,16 @@ def build_graph():
     # Create all the edges you need in your graph
     graph.add_edge(START, "start_game")
     graph.add_edge("start_game", "turn")
+    # Phase routes to either action or draw/flood
     graph.add_conditional_edges("turn", phase)
     graph.add_conditional_edges("action", take_turn)
     for role in ["messenger", "navigator", "engineer", "pilot", "diver", "explorer"]:
         graph.add_edge(role, "action_execution")
+    # Game can be won here
     graph.add_conditional_edges("action_execution", status)
+    # Game can be lost here (waters rise card)
     graph.add_conditional_edges("draw", status)
+    # Game can be lost here (flooding in Fools Landing, tile with a player on it, treasure tile)
     graph.add_conditional_edges("flood", status)
 
     return graph.compile()

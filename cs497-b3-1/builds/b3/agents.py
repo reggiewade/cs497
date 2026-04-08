@@ -22,6 +22,18 @@ from lib.state import ActionResponse
 from lib.events import GameAction, ActionType
 from lib.state import GameState
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("forbidden_island.log"),
+        logging.StreamHandler()
+    ]
+)
+
+import json
 #--------------------------------------------------------------------------------------------------
 # LLMs
 #
@@ -37,30 +49,42 @@ load_dotenv()
 
 # Agent 1 is the "reasoning" agent that decides what actions to take
 llm1 = chatlib.get_chat_model("BSU_")
-# Agent 2 is the "execution" agent that takes the reasoning from Agent 1 and turns it into the final GameAction format
-llm2 = chatlib.get_chat_model("API_").llm.with_structured_output(ActionResponse)
+# Agent 2 is the "execution" agent that takes the reasoning from Agent 1 and turns it into the final ActionResponse format
+llm2 = chatlib.get_chat_model("API_").llm.with_structured_output(ActionResponse, method="json_mode")
 
 #--------------------------------------------------------------------------------------------------
 # Helper functions
 #--------------------------------------------------------------------------------------------------
 def _llm_player(state: GameState, role: str) -> dict:
-    # 1. THE STRATEGIST (LLM1)
-    strategy_prompt = prompts.get_strategy_prompt(state, role)
-    strategy_suggestion = llm1.invoke(strategy_prompt.to_messages())
 
-    # 2. THE TRANSLATOR (LLM2)
-    translation_prompt = f"Convert this plan into a structured JSON action list: {strategy_suggestion.content}"
-    structured_output = llm2.invoke([
-        SystemMessage(content="You are a translation engine. Output only JSON."),
-        HumanMessage(content=translation_prompt)
-    ])
+    try:
+        #logging.info("CALLING LLM FOR ROLE: " + role)
+        strategy_prompt = prompts.get_strategy_prompt(state, role)
+        strategy_suggestion = llm1.invoke(strategy_prompt.to_messages())
 
-    # 3. CONVERT TO GAME ACTIONS
-    game_actions = []
-    for act in structured_output.actions:
-        game_actions.append(GameAction(type=act.type, name=act.name, args=act.args))
+        logging.info(f"[LLM1] Strategy suggestion for {role}:\n{strategy_suggestion.content}.")
+        translation_prompt = f"Convert this plan into a structured JSON action list: {strategy_suggestion.content}"
 
-    return {"actions": game_actions}
+        # SystemMessage: permanent rules
+        # HumanMessage: strategy suggestion + translation instructions
+        structured_output = llm2.invoke([
+            SystemMessage(content="You are a translation engine. Output only JSON."),
+            HumanMessage(content=translation_prompt)
+        ])
+
+        logging.info(f"[LLM2] Structured output for {role}:\n{structured_output.actions}")
+
+        # convert to game actions
+        game_actions = []
+        for act in structured_output.actions:
+            logging.info(f"Structured action: {act}")
+            game_actions.append(GameAction(type=act.type, name=act.name, args=act.args))
+
+        return {"actions": game_actions}
+    
+    except Exception as e:
+        print(f"[ERROR] LLM processing failed: {e}")
+        return {"actions": []}
 
 
 #--------------------------------------------------------------------------------------------------
